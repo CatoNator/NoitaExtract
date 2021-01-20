@@ -6,10 +6,6 @@ namespace NoitaExtract
 {
     class Program
     {
-        /*DirectorySecurity securityRules = new DirectorySecurity();
-        securityRules.AddAccessRule(new FileSystemAccessRule("Users", FileSystemRights.FullControl, AccessControlType.Allow));*/
-
-        
         static void Main(string[] args)
         {
             /*
@@ -25,7 +21,7 @@ namespace NoitaExtract
                 N bytes - filename
             */
 
-            /*if (args.Length >= 2)
+            if (args.Length >= 2)
             {
                 //Console.WriteLine("ArcEnemy - Convert directory trees into CatEngine archives (.cat)\nInput the folder.");
                 string input = args[0]; //Console.ReadLine();
@@ -34,15 +30,10 @@ namespace NoitaExtract
 
                 UnpackArc(input, output);
             }
-            else*/
+            else
                 Console.WriteLine("NoitaExtract - Unpack .wak file into a directory\nUsage: NoitaExtract.exe sourcefile destfolder");
-
-            string input = Console.ReadLine();
-                                    //Console.WriteLine("Input the output file.");
-            string output = Console.ReadLine();
-
-            UnpackArc(input, output);
         }
+
 
         static bool UnpackArc(string input, string output)
         {
@@ -58,25 +49,27 @@ namespace NoitaExtract
                     if (reader.ReadUInt32() != 0x3076) //version
                         return false;
 
+                    //this uint64 signifies the byte from which the file data starts
                     long dataoffset = reader.ReadInt64();
 
+                    //looping through the list of files in the header
                     while (stream.Position < dataoffset)
                     {
                         FileList.Add(ReadFile(reader));
                     }
 
+                    //the file info has been managed; let's extract the stuff
                     foreach (NoitaFile f in FileList)
                     {
+                        //seeking to file start in stream
                         stream.Seek((long)f.FileOffset, SeekOrigin.Begin);
 
+                        //creating a byte array from the file data within
                         byte[] data = reader.ReadBytes((int)f.FileSize);
 
+                        //this is a massive hack to convert the path, because Path.Join didn't work somehow
                         string fullpath = f.Path;
-                        string[] directorypathhack = fullpath.Split('/'); //C# fucking sucks
-
-                        string[] filepathparts = f.Path.Split('/');
-
-                        //string fullpath = output + '\\' + filepathparts[filepathparts.Length - 1];//output + "/" + 
+                        string[] directorypathhack = fullpath.Split('/');
 
                         string path = "";
 
@@ -85,9 +78,13 @@ namespace NoitaExtract
                             path += directorypathhack[i]+'/';
                         }
 
+                        //logging...
                         Console.WriteLine("creating dir " + path);
+
+                        //if the directory we're sending data to doesn't exist, we create it
                         DirectoryInfo di = Directory.CreateDirectory(path);
 
+                        //let's write the file
                         using (FileStream outstream = File.Create(fullpath))
                         {
                             using (BinaryWriter writer = new BinaryWriter(outstream))
@@ -102,10 +99,9 @@ namespace NoitaExtract
             return true;
         }
 
+        //file info reader; produces a NoitaFile with info filled out
         static NoitaFile ReadFile(BinaryReader reader)
         {
-            //File returnfile;
-
             uint offset = reader.ReadUInt32();
             uint filesize = reader.ReadUInt32();
             uint namelength = reader.ReadUInt32();
@@ -120,11 +116,7 @@ namespace NoitaExtract
             return new NoitaFile(offset, filesize, name);
         }
 
-        /*static void ExtractFile(string outpath, Stream BinaryReader reader, File file)
-        {
-            
-        }*/
-
+        //the file info struct
         struct NoitaFile
         {
             public uint FileOffset;
